@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>DeepPropertyAccessor</id>
+    <version>1.0.0</version>
+    <title>$title$</title>
+    <authors>github.com/ikoshelev</authors>
+    <owners>github.com/ikoshelev</owners>
+    <licenseUrl>https://opensource.org/licenses/MIT</licenseUrl>
+    <projectUrl>https://github.com/IKoshelev/DeepPropertyAccessor</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Access deeply nested chains of properties in a null-safe manner with optional delegate to handle (i.e. log) interrupted chains. </description>
+    <releaseNotes>Initial release</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>deep nested property field access chains maybe-monad interrupted delegate</tags>
+  </metadata>
+</package>

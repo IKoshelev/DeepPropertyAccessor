@@ -107,7 +107,7 @@ namespace DeepPropertyAccessor
             var propInfo = (expr.Member as PropertyInfo);
             if (propInfo != null)
             {
-                return propInfo.GetValue(source);
+                return propInfo.GetValue(source, null);
 
             }
             var fieldInfo = (expr.Member as FieldInfo);
