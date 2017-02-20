@@ -110,6 +110,32 @@ namespace DeepPropertyAccessor.Test
             Assert.That(chainUpToNull.ElementAt(2).Value == null);
             Assert.That(fullChain == "(root).Prop.Field.Field.Prop");
         }
+
+        [Test]
+        public void DeepGetOnNullInChainDelegateIsOptional()
+        {
+            var subject = new Subject<Subject<Subject<Subject<RefTest>>>>();
+
+            subject.Prop.Field = null;
+
+            var val = subject
+                        .DeepGet(x => x.Prop.Field.Field.Prop);
+
+            Assert.That(val == null);
+        }
+
+        [Test]
+        public void DeepGetStructOnNullInChainDelegateIsOptional()
+        {
+            var subject = new Subject<Subject<Subject<Subject<int>>>>();
+
+            subject.Prop.Field = null;
+
+            var val = subject
+                        .DeepGetStruct(x => x.Prop.Field.Field.Prop);
+
+            Assert.That(val == null);
+        }
     }
 
     public class Subject<T> where T: new()

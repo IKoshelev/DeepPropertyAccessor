@@ -16,6 +16,8 @@ namespace DeepPropertyAccessor
             Action<List<AccessorChainPart>, Expression<Func<TSource, TProp>>> onNullInChain = null)
             where TProp : class
         {
+            onNullInChain = onNullInChain ?? ((a,b)=>{ });
+
             var chain = new List<AccessorChainPart>();
 
             foreach(var chainPart in ParseAccessChain(source, getter))
@@ -37,6 +39,8 @@ namespace DeepPropertyAccessor
             Action<List<AccessorChainPart>, Expression<Func<TSource, TProp>>> onNullInChain = null)
             where TProp : struct
         {
+            onNullInChain = onNullInChain ?? ((a, b) => { });
+
             var chain = new List<AccessorChainPart>();
 
             foreach (var chainPart in ParseAccessChain(source, getter))
