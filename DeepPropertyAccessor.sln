@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepPropertyAccessor", "DeepPropertyAccessor\DeepPropertyAccessor.csproj", "{3E8ED66D-19CD-491C-BCEE-94A35A8A7722}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepPropertyAccessor.Test", "DeepPropertyAccessor.Test\DeepPropertyAccessor.Test.csproj", "{DED68AB9-FB24-4DF1-A335-41703392C507}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{3E8ED66D-19CD-491C-BCEE-94A35A8A7722}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E8ED66D-19CD-491C-BCEE-94A35A8A7722}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E8ED66D-19CD-491C-BCEE-94A35A8A7722}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DED68AB9-FB24-4DF1-A335-41703392C507}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DED68AB9-FB24-4DF1-A335-41703392C507}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DED68AB9-FB24-4DF1-A335-41703392C507}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DED68AB9-FB24-4DF1-A335-41703392C507}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
