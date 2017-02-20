@@ -110,24 +110,6 @@ namespace DeepPropertyAccessor.Test
             Assert.That(chainUpToNull.ElementAt(2).Value == null);
             Assert.That(fullChain == "(root).Prop.Field.Field.Prop");
         }
-
-
-        [Test]
-        public void TestMethod1()
-        {
-            var subject = new Subject<Subject<int>>();
-
-            var val = subject.DeepGetStruct(x => x.Prop.Field);
-
-            subject.Prop = null;
-
-            var val2 = subject.DeepGetStruct(x => x.Prop.Field, 
-                (chainUpToNull, fullChain) =>
-            {
-                var chain = fullChain.ToChainDescription();
-            });
-
-        }
     }
 
     public class Subject<T> where T: new()
