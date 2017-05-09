@@ -15,7 +15,11 @@ namespace DeepPropertyAccessor
             Expression<Func<TSource, TProp>> getter, 
             Action<List<AccessorChainPart>, Expression<Func<TSource, TProp>>> onNullInChain = null)
             where TProp : class
-        {
+        {         
+            getter = SubstituteCapturedVarsToTheirCurrentValueAsConst(getter);
+
+            Validate(getter);
+
             onNullInChain = onNullInChain ?? ((a,b)=>{ });
 
             var chain = new List<AccessorChainPart>();
@@ -39,6 +43,10 @@ namespace DeepPropertyAccessor
             Action<List<AccessorChainPart>, Expression<Func<TSource, TProp>>> onNullInChain = null)
             where TProp : struct
         {
+            getter = SubstituteCapturedVarsToTheirCurrentValueAsConst(getter);
+
+            Validate(getter);
+
             onNullInChain = onNullInChain ?? ((a, b) => { });
 
             var chain = new List<AccessorChainPart>();
@@ -68,19 +76,80 @@ namespace DeepPropertyAccessor
             return "(root)" + str.Substring(firstDotIndex);
         }
 
+        private static Dictionary<string, bool>  ValidationCache = new Dictionary<string, bool>();
+        private static object CahceLock = new object();
+        private static void Validate<TSource, TProp>(Expression<Func<TSource, TProp>> getter)
+        {
+            var key = getter.ToString();
+            if(ValidationCache.TryGetValue(key, out bool value))
+            {
+                if (value == false)
+                {
+                    throw new ExpressionParseException("Expression has been previously deemed invalid.",getter);
+                };
+                return;
+            }
+
+            try
+            {
+                new AccessChainValidityChecker().Visit(getter);
+            }
+            catch (Exception ex)
+            {
+                lock (CahceLock)
+                {
+                    ValidationCache.Add(key, false);
+                }
+                throw;
+            }
+
+            lock (CahceLock)
+            {
+                ValidationCache.Add(key, true);
+            }
+        }
+
+        private static Expression<Func<TSource, TProp>> 
+            SubstituteCapturedVarsToTheirCurrentValueAsConst<TSource, TProp>
+                                                                (Expression<Func<TSource, TProp>> getter)
+        {
+            var visitor = new CapturedVarToItsCurrentValueAsConstSubstituter();
+            var modified = (Expression<Func<TSource, TProp>>)visitor.Visit(getter);
+            return modified;
+        }
+
         private static IEnumerable<AccessorChainPart> ParseAccessChain<TSource, TProp>(
             TSource source, 
             Expression<Func<TSource, TProp>> getter)
         {
             yield return new AccessorChainPart(source, typeof(TSource));
 
-            List<MemberExpression> chainOfMemberAccess = new List<MemberExpression>();
+            List<Expression> chainOfMemberAccess = new List<Expression>();
 
-            var current = getter.Body as MemberExpression;
+            var current = getter.Body;
             while (current != null)
             {
-                chainOfMemberAccess.Add(current);
-                current = current.Expression as MemberExpression;
+                switch (current)
+                {
+                    case ParameterExpression _:
+                        current = null; //start of chain, handled separately
+                        break;
+                    case MemberExpression memberExpr:
+                        chainOfMemberAccess.Add(memberExpr);
+                        current = memberExpr.Expression;
+                        break;
+                    case BinaryExpression binExpr:
+                        chainOfMemberAccess.Add(binExpr);
+                        current = binExpr.Left;
+                        break;
+                    case MethodCallExpression methodCallExpr:
+                        chainOfMemberAccess.Add(methodCallExpr);
+                        current = methodCallExpr.Object;
+                        break;
+                    default:
+                        throw new ExpressionParseException("Unrecognized expression in chain", current);
+                }
+                
             }
 
             chainOfMemberAccess.Reverse();
@@ -89,53 +158,93 @@ namespace DeepPropertyAccessor
             if (chainOfMemberAccess.Any())
             {
                 var firstAccess = chainOfMemberAccess.ElementAt(0);
-                lastValue = GetValueFromMemberExpression(source, firstAccess);
+                lastValue = firstAccess.GetExprValue(out Exception exceptionInChain, source);
 
-                yield return new AccessorChainPart(lastValue, firstAccess.Member);
+                yield return new AccessorChainPart(lastValue, firstAccess, exceptionInChain);
             }
 
             for(int count1 = 1; count1 < chainOfMemberAccess.Count(); count1++)
             {
                 var currentAccess = chainOfMemberAccess.ElementAt(count1);
-                lastValue = GetValueFromMemberExpression(lastValue, currentAccess);
-                yield return new AccessorChainPart(lastValue, currentAccess.Member);
+                lastValue = currentAccess.GetExprValue(out Exception exceptionInChain, lastValue);
+                yield return new AccessorChainPart(lastValue, currentAccess, exceptionInChain);
             }
-        }
-
-        private static object GetValueFromMemberExpression(object source, MemberExpression expr)
-        {
-            var propInfo = (expr.Member as PropertyInfo);
-            if (propInfo != null)
-            {
-                return propInfo.GetValue(source, null);
-
-            }
-            var fieldInfo = (expr.Member as FieldInfo);
-            if (fieldInfo != null)
-            {
-                return fieldInfo.GetValue(source);
-            }
-
-            throw new ArgumentException($"{expr.ToString()} is neither Field nor Property access.");
-
         }
     }
 
     public class AccessorChainPart
     {
+        //not guaranteed, but worth a try
+        public const string ExpectedIndexerMethodName = "get_Item";
         public object Value { get; private set; }
+        public Exception ExceptionThrown { get; private set; }
         public string Name { get; private set; }
         public MemberInfo MemberInfo { get; private set; }
+        public BinaryExpression BinarryExpression { get; private set; }
+        public MethodCallExpression MethodCallExpression { get; private set; }
 
         public AccessorChainPart()
         {
         }
 
-        public AccessorChainPart(object value, MemberInfo memberInfo)
+        public AccessorChainPart(object value, Expression expr, Exception exceptionThrown = null)
         {
+            void ProcessBinaryExpr(BinaryExpression binExpr)
+            {
+                BinarryExpression = binExpr;
+                var argument = binExpr.Right;
+                var argValue = argument.GetExprValue(out Exception exceptionInChain) ?? "null";
+                if (exceptionInChain != null)
+                {
+                    throw exceptionInChain;
+                }
+                Name = $"[{argValue}]";
+            }
+
+            void ProcessMethodCallExpr(MethodCallExpression methodCallExpr)
+            {
+                MethodCallExpression = methodCallExpr;
+                var arguments = methodCallExpr.Arguments.Select(x =>
+                {
+                    var val = x.GetExprValue(out Exception ex);
+                    if (ex != null)
+                    {
+                        throw ex;
+                    }
+                    return (val is string) 
+                                ? $"\"{val}\"" 
+                                : (val ?? "null");
+                });
+                var argValue = string.Join(",", arguments);
+                var methodName = methodCallExpr.Method.Name;
+                var isIndexer = methodName == ExpectedIndexerMethodName;
+                if (isIndexer)
+                {
+                    Name = $"[{argValue}]";
+                }
+                else
+                {
+                    Name = $"{methodName}({argValue})";
+                }           
+            }
+
             Value = value;
-            MemberInfo = memberInfo;
-            Name = MemberInfo.Name;
+            ExceptionThrown = exceptionThrown;
+            switch (expr)
+            {
+                case MemberExpression memberExpr:
+                    MemberInfo = memberExpr.Member;
+                    Name = MemberInfo.Name;
+                    break;
+                case BinaryExpression binExpr:
+                    ProcessBinaryExpr(binExpr);
+                    break;
+                case MethodCallExpression methodCallExpr:
+                    ProcessMethodCallExpr(methodCallExpr);
+                    break;
+                default:
+                    throw new ExpressionParseException("Expression type not supported.", expr);
+            }        
         }
 
         public AccessorChainPart(object value, Type root)
@@ -143,7 +252,6 @@ namespace DeepPropertyAccessor
             Value = value;
             Name = "(root)" + GetClassNameAccountingForGeneric(root);
         }
-
 
         private string GetClassNameAccountingForGeneric(Type targetType)
         {
