@@ -1,3 +1,11 @@
+Library is available via NuGet prackage https://www.nuget.org/packages/DeepPropertyAccessor/
+
+Inner workings of the library are explained in articles:
+
+http://ikoshelev.azurewebsites.net/search/id/1/Expression-trees-and-advanced-queries-in-CSharp-01-IQueryable-and-Expression-Tree-basics
+
+http://ikoshelev.azurewebsites.net/search/id/3/Expression-trees-and-advanced-queries-in-CSharp-03-Expression-Tree-modification
+
 # DeepPropertyAccessor
 Access deeply nested chains of properties in a null-safe manner with optional delegate to handle (i.e. log) interrupted chains. 
 
